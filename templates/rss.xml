@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>{{ site_name }}</title>
+    <link>{{ base_url }}</link>
+    <description>A blog served by a MirageOS unikernel.</description>
+{%- for post in posts %}
+    <item>
+      <title>{{ post.title_escaped }}</title>
+      <link>{{ base_url }}/{{ post.slug }}</link>
+      <guid>{{ base_url }}/{{ post.slug }}</guid>
+      <pubDate>{{ post.rfc822_date }}</pubDate>
+      <description>{{ post.body_cdata }}</description>
+    </item>
+{%- endfor %}
+  </channel>
+</rss>

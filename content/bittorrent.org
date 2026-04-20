@@ -1,0 +1,161 @@
+#+TITLE: I Built a BitTorrent Client from Scratch in Nim
+#+AUTHOR: Brad White
+#+DATE: 2025-10-13
+#+TECH: nix, nim
+
+I wrote a BitTorrent client in [[https://nim-lang.org][Nim]] using nothing but the standard library. Zero dependencies. Just the [[https://www.bittorrent.org/beps/bep_0003.html][BEP 3 spec]] and stubbornness.
+
+Source: [[https://github.com/silent-brad/bt-in-nim][GitHub]].
+
+* Why BitTorrent? Why Nim?
+
+BitTorrent looks simple on paper — the [[https://www.bittorrent.org/beps/bep_0003.html][spec]] is a few pages long. But implementing it throws you into binary protocols, networking, hashing, and state management all at once. It's the perfect "do you actually know this language?" test.
+
+Nim was the right tool. High-level enough to move fast, low-level enough for raw sockets. =data.parse_bencode(pos)= reads like English. And no deps means I own every line.
+
+* Architecture
+
+Six modules, each a single concern:
+
+#+begin_example
+bt.nim            → Entry point, CLI
+bencode.nim       → Bencoding parser/encoder
+torrent.nim       → .torrent parsing, info hash, piece math
+tracker.nim       → HTTP tracker announces
+peer_wire.nim     → Peer wire protocol
+piece_manager.nim → Block tracking, SHA1, file assembly
+client.nim        → Orchestrator
+#+end_example
+
+* Bencoding
+
+Everything in BitTorrent is [[https://www.bittorrent.org/beps/bep_0003.html][bencoded]]. Four types: integers (=i42e=), strings (=4:spam=), lists (=l...e=), dictionaries (=d...e=). No ambiguity, trivially parseable.
+
+Nim's variant objects map one-to-one:
+
+#+begin_src nim
+type
+  BencodeKind* = enum
+    bk_int, bk_string, bk_list, bk_dict
+
+  BencodeValue* = ref object
+    case kind*: BencodeKind
+    of bk_int: int_val*: int
+    of bk_string: str_val*: string
+    of bk_list: list_val*: seq[BencodeValue]
+    of bk_dict: dict_val*: OrderedTable[string, BencodeValue]
+#+end_src
+
+=OrderedTable= isn't a style choice — BEP 3 requires sorted dictionary keys, and the info hash depends on preserving that order exactly.
+
+* The Info Hash
+
+A =.torrent= file is a bencoded dictionary. The *info hash* — SHA1 of the re-encoded =info= dict — is the identity of the entire torrent. Tracker requests, peer handshakes, everything keys off this:
+
+#+begin_src nim
+let info_encoded = encode_bencode(root["info"])
+result.info_hash = sha1_raw(info_encoded)
+#+end_src
+
+Get the encoding wrong and nothing works. The spec [[https://www.bittorrent.org/beps/bep_0003.html][warns you about this]].
+
+* Tracker
+
+The tracker is an HTTP GET. You send the info hash, peer ID, port, and progress. You get back a peer list.
+
+#+begin_src nim
+proc generate_peer_id*(): string =
+  result = "-NIM001-"
+  for i in 0..11:
+    result &= char(rand(255))
+#+end_src
+
+Peer IDs follow the [[https://www.bittorrent.org/beps/bep_0020.html][Azureus convention]]: client tag + random bytes. That's how your torrent app knows what software every peer is running. In practice every tracker uses [[https://www.bittorrent.org/beps/bep_0023.html][compact format (BEP 23)]]: 6 bytes per peer, 4 IP + 2 port, big-endian.
+
+* The Peer Wire Protocol
+
+The [[https://www.bittorrent.org/beps/bep_0003.html][peer protocol]] is binary over TCP.
+
+*Handshake*: 68 bytes. =\x13= + ="BitTorrent protocol"= + 8 reserved bytes + 20-byte info hash + 20-byte peer ID. Info hashes don't match? Disconnect.
+
+#+begin_src nim
+const HANDSHAKE_PSTR = "BitTorrent protocol"
+#+end_src
+
+*State*: Two bits per side — *choked* and *interested*. Everything starts choked and not interested. Data only flows when one side is interested and the other isn't choking.
+
+*Messages*: Length-prefixed, nine types:
+
+| ID | Message        | Purpose                               |
+|----+----------------+---------------------------------------|
+|  0 | choke          | Stop sending data                     |
+|  1 | unchoke        | Start sending data                    |
+|  2 | interested     | I want what you have                  |
+|  3 | not interested | I don't need anything from you        |
+|  4 | have           | I just got piece N                    |
+|  5 | bitfield       | Here's everything I have              |
+|  6 | request        | Send me block (piece, offset, length) |
+|  7 | piece          | Here's the data you asked for         |
+|  8 | cancel         | Never mind that request               |
+
+One gotcha: Nim's stdlib =connect= is blocking. One dead peer hangs the whole client. Had to drop to =posix= for non-blocking connect with =select=:
+
+#+begin_src nim
+proc connect_with_timeout(socket: Socket, address: string, port: Port, timeout_ms: int) =
+  let fd = socket.get_fd()
+  fd.set_blocking(false)
+  # ... select() with timeout ...
+  fd.set_blocking(true)
+#+end_src
+
+* Piece Management
+
+Pieces are split into 16 KiB blocks. Go larger and peers will drop you.
+
+The loop:
+1. Pick a piece the peer has that we need
+2. Fire off up to 10 block requests (pipelining)
+3. As blocks land, store them
+4. All blocks in? SHA1 verify against the hash from the =.torrent= file
+5. Hash matches → done. Doesn't match → trash it, retry.
+
+#+begin_src nim
+let expected_hash = pm.torrent.piece_hash(piece_index)
+let actual_hash = sha1_raw(piece_data)
+
+if actual_hash == expected_hash:
+  piece.verified = true
+#+end_src
+
+In-flight tracking uses a hash set of =(piece_index, block_offset)= pairs packed into an =int64=. Simple and fast.
+
+* The Orchestrator
+
+1. Parse torrent → announce to tracker → get peers
+2. Connect to up to 30 peers (handshake + =interested=)
+3. Round-robin through connected peers, download blocks
+4. Track progress, detect stalls, retry
+5. All pieces verified → write files to disk
+
+Pipelining — 10 in-flight requests per peer — is what makes the throughput work. Without it you're waiting for each block round-trip and throughput craters.
+
+* What I Learned
+
+*The spec is great.* BEP 3 is short, complete, and well-designed. No unnecessary complexity.
+
+*Binary protocols punish sloppiness.* One wrong byte in the handshake and you get silence. Nim's low-level string ops made this manageable.
+
+*The protocol is easy. Connection management is hard.* Peers drop, time out, send garbage, choke forever, or have nothing you need. The retry logic is more code than the protocol itself.
+
+*Nim's stdlib is legit.* HTTP, SHA1, sockets, POSIX, ordered tables — everything was there. No deps needed.
+
+* Running It
+
+#+begin_src bash
+nix build github:silent-brad/bt-in-nim
+./result/bin/bt some-file.torrent
+#+end_src
+
+Handles single-file and multi-file torrents, compact and dictionary peer formats, writes verified files to disk. It's not replacing qBittorrent, but it downloads real torrents from real swarms, and every byte is SHA1-verified.
+
+You want to understand a protocol? Implement it.

@@ -1,0 +1,92 @@
+#+TITLE: Conway's Game of Life on an ESP32-S3 — Written in Nim
+#+AUTHOR: Brad White
+#+DATE: 2026-04-09
+#+TECH: nix, nim
+
+* Conway's Game of Life on an ESP32-S3 — Written in Nim
+
+I built a standalone Game of Life device: ESP32-S3, 5-inch touchscreen, Nim. No OS, no browser, no frameworks. Bare-metal cellular automata at 30 FPS on a $30 display you hold in your hand.
+
+[[file:/imgs/game-of-life-esp32.gif]]
+
+[[file:/imgs/game-of-life-esp32.jpg]]
+
+** Why Nim on an ESP32?
+
+Most ESP32 code is C (fast, tedious) or MicroPython (pleasant, slow). Nim compiles to C — native performance, full ESP-IDF access, but the code /reads/ like Python with actual type safety.
+
+The project uses [[https://github.com/elcritch/nesper][Nesper]] for I2C, GPIO, and task delays. Where Nesper didn't cover something (the RGB LCD driver), I wrote a C shim and imported it with a two-line FFI pragma: ~{.importc, header: "lcd.h".}~. Done.
+
+** The Hardware
+
+[[https://www.amazon.com/ELECROW-Dual-Core-Compatible-PlatformIO-MicroPython/dp/B0DL5WB7RQ/ref=sr_1_3?sr=8-3][Elecrow 5" 800×480 RGB panel]] with built-in ESP32-S3 and GT911 capacitive touch. Single board — plug USB-C, flash, you have a touchscreen computer.
+
+16-bit RGB565 mode: 800×480×2 = 768 KB per frame. Fits in PSRAM. Backlight is a GPIO pin.
+
+** The Simulation
+
+200×112 grid, each cell 4×4 pixels, filling 800×448 above a 32-pixel UI bar. Toroidal wrapping — gliders that leave one edge come back on the other.
+
+#+begin_src nim
+for y in 0 ..< h:
+  for x in 0 ..< w:
+    let neighbors = ... # sum of 8 surrounding cells (with wrapping)
+    let alive = sim.cells[row_curr + x]
+    sim.scratch[row_curr + x] =
+      if (alive == 1 and (neighbors == 2 or neighbors == 3)) or
+         (alive == 0 and neighbors == 3): 1'u8
+      else: 0'u8
+swap(sim.cells, sim.scratch)
+#+end_src
+
+Double-buffered with a scratch array. No allocations. Just ~swap~.
+
+** Connected-Component Coloring
+
+The best feature: every separate organism gets its own color. Flood-fill with an explicit stack (no recursion — you don't have the stack space on a microcontroller). Each connected group gets a label, the label hashes to RGB565:
+
+#+begin_src nim
+proc label_to_color(label: uint16): uint16 =
+  var h = label * 0x9E37'u16
+  h = h xor (h shr 7)
+  h = h * 0x5F35'u16
+  let r = ((h shr 0) and 0x1F) or 0x08
+  let g = ((h shr 5) and 0x3F) or 0x10
+  let b = ((h shr 11) and 0x1F) or 0x08
+  (r shl 11) or (g shl 5) or b
+#+end_src
+
+The ~or~ floors prevent colors too dark to see. Cheap enough to run per-pixel at 30 FPS.
+
+** Touch Input
+
+GT911 talks I2C with 16-bit register addresses (unusual). Touch events classify into ~Started~, ~Moved~, ~Ended~ — tap to toggle cells, drag to paint or erase. Bottom 32 pixels are UI buttons: PLAY/PAUSE, STEP, CLEAR, RANDOM, SPD-, SPD+.
+
+** Rendering
+
+No display library. Direct framebuffer writes — a flat array of 384,000 ~uint16~ values:
+
+1. Draw the 200×112 grid, each 4×4 block colored by component label
+2. Draw grid lines
+3. Fill the UI bar
+4. ~memcpy~ to the LCD panel's DMA buffer
+
+Text uses a hand-coded 5×7 bitmap font. A-Z, 0-9, a few symbols. No font library.
+
+** Build
+
+Nim → C → ESP-IDF (CMake + Ninja) → ELF → flash. A Nix flake provides the entire toolchain. Three commands: ~compile~, ~build~, ~flash~.
+
+** What I Learned
+
+- *Nim's C backend is a superpower for embedded.* High-level language, zero overhead beyond what you'd write in C. The FFI is two lines.
+- *Connected-component labeling makes Life beautiful.* Without it, white dots on black. With it, you watch organisms merge, split, and compete.
+- *Touch changes everything.* Drawing patterns with your finger and watching them evolve beats clicking in a browser.
+- *Nix + Nushell for embedded dev shells.* Reproducible toolchains with ergonomic project commands.
+
+** Links
+
+- Source: [[https://github.com/silent-brad/gol_esp32_nim]]
+- Nim: [[https://nim-lang.org]]
+- Nesper: [[https://github.com/elcritch/nesper]]
+- Elecrow Display: [[https://www.amazon.com/ELECROW-Dual-Core-Compatible-PlatformIO-MicroPython/dp/B0DL5WB7RQ/ref=sr_1_3?sr=8-3]]

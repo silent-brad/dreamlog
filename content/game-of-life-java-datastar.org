@@ -1,0 +1,70 @@
+#+TITLE: Real-Time Game of Life with Java, Datastar, and Zero JavaScript
+#+AUTHOR: Brad White
+#+DATE: 2026-04-09
+#+TECH: nix, java, spring, datastar, jinja
+
+I built a multi-color, real-time, interactive [[https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life][Conway's Game of Life]] running on Spring Boot, streamed to the browser with [[https://data-star.dev][Datastar]]. Zero JavaScript. Not as masochism — as a proof that server-driven hypermedia actually works for real-time interactive stuff.
+
+Source: [[https://github.com/silent-brad/gol_jv_ds][GitHub]]. Live: [[https://gameoflife.knightoffaith.systems]].
+
+[[file:/imgs/game-of-life-datastar.gif]]
+
+* Why These Tools?
+
+Java's infrastructure is mature and boring — exactly what you want. Spring Boot, virtual threads, Maven. Rock solid. What it lacked was a way to push live UI without JavaScript frameworks.
+
+Datastar fixes that. 11 KB. It takes HTML responses or SSE streams, you annotate your markup with =data-*= attributes, and it handles reactivity and DOM patching. No build step, no virtual DOM, no JS to write.
+
+* Architecture
+
+Four Java files, one HTML template:
+
+#+begin_src
+Browser  ──GET /──▶  GameController  ──renders──▶  index.jinja
+                                                       │
+Browser  ──GET /sse──▶  SSE stream ◀── GameService ────┘
+                                          │
+Browser  ──POST /tap──▶  GameController ──▶ Game.fillCross()
+#+end_src
+
+*=Game.java=*: Flat =int[]= for a 50×50 board. Classic rules — survive with 2-3 neighbors, born with exactly 3. New cells inherit a random parent's color, producing organic territory battles.
+
+*=GameService.java=*: Virtual thread ticks every 200ms. Pre-renders the board to an HTML string (2,500 =<div>= elements) and caches it. Rendering cost: once per tick, regardless of viewer count.
+
+*=GameController.java=*: Three routes. =GET /= serves the page. =GET /sse= opens a persistent SSE connection. =POST /tap= stamps a random-color cross onto the board.
+
+*=index.jinja=*: The entire client-side logic:
+
+#+begin_src html
+<div data-init="@get('/sse')">
+  <div id="board" class="board"
+       data-on:pointerdown="@post('/tap?id=' + evt.target.dataset.id)">
+    {{ boardHtml }}
+  </div>
+</div>
+#+end_src
+
+=data-init= opens the SSE connection. =data-on:pointerdown= fires the POST. That's it. That's the frontend.
+
+* The SSE Wiring
+
+1. Request comes in, start async context
+2. =CountDownLatch= tracks connection lifetime
+3. Register a listener — each tick sends a =PatchElements= event with the cached board HTML
+4. Virtual thread blocks on the latch, cleans up when the connection drops
+
+The board is pre-rendered and cached, so each SSE push is just string concatenation. Virtual threads mean thousands of concurrent SSE connections cost nearly nothing. The JVM handles the multiplexing.
+
+* No JavaScript, Really
+
+The only =<script>= tag loads Datastar from a CDN. Zero application JS. SSE streams, DOM morphing, POST requests on click — all declared in HTML attributes.
+
+The server owns the state. The server owns the rendering. The browser is a terminal.
+
+* What I Learned
+
+Datastar inverts the typical web dev model. No "build an API, build a frontend, sync state between them." The server computes state, renders HTML, pushes it. No client-side state, no optimistic updates, no cache invalidation.
+
+For a simulation that ticks at a fixed rate and broadcasts identical state to all viewers, this is the ideal architecture.
+
+~300 lines of Java. ~60 lines of HTML. Boring tools are the right tools.

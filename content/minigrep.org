@@ -1,0 +1,103 @@
+#+TITLE: Minigrep in 12 Languages
+#+AUTHOR: Brad White
+#+DATE: 2025-11-11
+#+TECH: haskell, scheme, nim, rust, lua, elixir, go, gleam, java, typescript, c++, ocaml, nix
+
+* Minigrep in 12 Languages
+
+I wrote =minigrep= — a minimal =grep= clone — in twelve languages. Same problem, twelve different ways to think about it. Take a pattern and a filename, read the file, print matching lines with line numbers. Simple enough for an afternoon, revealing enough to show a language's personality.
+
+Source: [[https://github.com/silent-brad/minigrep-in-12-langs][GitHub]].
+
+** The Languages
+
+- *Haskell* — pure functional, hand-rolled substring matching
+- *Scheme* (Chicken) — Lisp-family, recursive list processing
+- *Nim* — systems language with functional leanings
+- *Rust* — iterators and pattern matching
+- *Lua* — lightweight scripting, tables everywhere
+- *Elixir* — BEAM-powered streams and pipes
+- *Go* — imperative, line-by-line scanning
+- *Gleam* — type-safe functional on BEAM
+- *Java* — =FileInputStream= byte reading
+- *TypeScript* — Node.js with =fs=
+- *C++* — =<regex>= and =<fstream>=
+- *OCaml* — pattern matching with =Str=
+
+** Why This Problem?
+
+Every developer uses =grep= daily. A minimal version touches just enough: CLI args, file I/O, string matching, formatted output. Together they sketch what "writing a small program" actually feels like in a language.
+
+** What I Noticed
+
+*** Functional languages think in pipelines
+
+Haskell, Elixir, Gleam, OCaml — all express the solution as: read → zip with indices → filter → print.
+
+#+BEGIN_SRC haskell
+grep query filename = do
+  contents <- readFile filename
+  let numberedLines = zip [1 ..] (lines contents)
+      matches = [(n, line) | (n, line) <- numberedLines, query `isSubstringOf` line]
+  if null matches
+    then putStrLn $ "No matches found for '" ++ query ++ "' in " ++ filename
+    else mapM_ printMatch matches
+#+END_SRC
+
+Haskell doesn't have =isSubstringOf= in the Prelude. You build it from =tails= and =isPrefixOf=. Classic Haskell — here are the Legos, assemble them yourself.
+
+*** Elixir is the shortest and cleanest
+
+#+BEGIN_SRC elixir
+File.stream!(file)
+|> Stream.with_index()
+|> Stream.filter(fn {line, _index} -> String.contains?(line, pattern) end)
+|> Stream.map(fn {line, index} -> IO.puts("#{index}: #{line}") end)
+|> Stream.run()
+#+END_SRC
+
+Five lines. Lazy by default. The pipe operator makes data flow obvious. You get why people love Elixir.
+
+*** Gleam makes you handle everything
+
+Every failure is a =Result= type. No exceptions, no =nil=. More ceremony for a tiny script, but the compiler won't let you ship bugs. For a larger program, you'd appreciate the discipline.
+
+*** Scheme is satisfyingly recursive
+
+Chicken Scheme uses explicit recursion for everything — =port->lines= builds a list by consing, =get-matches= accumulates tail-recursively. Verbose but honest.
+
+*** Go is a for loop
+
+=bufio.Scanner=, increment a counter, check a condition, print. No map, no filter, no cleverness. The explicitness /is/ the point.
+
+*** C++ accidentally has the most features
+
+The only version using a full regex engine for matching. =minigrep-cpp= handles patterns like =can't.*bothered= while every other version does literal substrings. A happy accident of reaching for =<regex>=.
+
+*** Nim gently suggests you use a for loop
+
+Nim's =func= keyword enforces no side effects, so matching and formatting are pure. The recursive style works, but you can feel the language nudging you toward imperative code.
+
+*** Java is Java
+
+Reading a file with =FileInputStream= and a 1024-byte buffer in 2025 is a time capsule. =Files.lines()= exists. But there's something honest about seeing every byte.
+
+** The Nix Setup
+
+Every language has its own Nix flake. A top-level =flake.nix= composes them:
+
+#+BEGIN_SRC sh
+nix build .#rust
+nix build .#haskell
+nix build .#gleam
+#+END_SRC
+
+Each sub-flake uses =stdenv.mkDerivation= (or equivalent) — just the compiler and the source file. One file, one build step.
+
+** The Test File
+
+All versions search =either-or.txt=, a collection of Kierkegaard quotes from /Either/Or/. Kierkegaard wrote about the anxiety of choosing. This project is about the choices languages make.
+
+** Final Thoughts
+
+Writing the same program twelve times doesn't teach you twelve languages. But you feel each one — its syntax weight, its idioms, whether it thinks in pipelines or loops, whether it trusts you with =nil= or makes you unwrap a =Result=. Fifty lines of working code teaches more than a hundred pages of docs.

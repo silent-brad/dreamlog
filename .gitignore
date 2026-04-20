@@ -1,2 +1,4 @@
-tmp
 result
+tmp
+_build
+*/_build
