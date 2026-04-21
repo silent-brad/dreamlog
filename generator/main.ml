@@ -63,39 +63,64 @@ let extract_directive content key =
   in
   find lines
 
-let run_mldoc mldoc_bin filepath =
-  let cmd =
-    Printf.sprintf "%s %s -b html -o -" (Filename.quote mldoc_bin)
-      (Filename.quote filepath)
-  in
-  let ic = Unix.open_process_in cmd in
-  let buf = Buffer.create 4096 in
-  (try
-     while true do
-       Buffer.add_char buf (input_char ic)
-     done
-   with End_of_file -> ());
-  (match Unix.close_process_in ic with
-  | Unix.WEXITED 0 -> ()
-  | Unix.WEXITED n ->
-      Printf.eprintf "mldoc exited %d for %s\n" n filepath;
-      exit 1
-  | _ ->
-      Printf.eprintf "mldoc terminated abnormally for %s\n" filepath;
-      exit 1);
-  Buffer.contents buf
+let is_image_url url =
+  let exts = [ ".png"; ".jpg"; ".jpeg"; ".gif"; ".svg"; ".webp"; ".bmp" ] in
+  let lower = String.lowercase_ascii url in
+  List.exists (fun ext -> Filename.check_suffix lower ext) exts
 
-let fix_file_urls html =
-  let pattern = "src=\"file:" in
-  let plen = String.length pattern in
-  let replacement = "src=\"" in
+let strip_file_prefix url =
+  let prefix = "file:" in
+  let plen = String.length prefix in
+  if String.length url >= plen && String.sub url 0 plen = prefix then
+    String.sub url plen (String.length url - plen)
+  else url
+
+let render_org content =
+  let doc = Orgcaml.Parser.parse content in
+  let html = Orgcaml.Html.render_document doc in
+  html
+
+let fix_image_links html =
+  let a_prefix = "<a href=\"" in
+  let aplen = String.length a_prefix in
   let buf = Buffer.create (String.length html) in
   let hlen = String.length html in
   let rec go i =
     if i >= hlen then ()
-    else if i + plen <= hlen && String.sub html i plen = pattern then (
-      Buffer.add_string buf replacement;
-      go (i + plen))
+    else if i + aplen <= hlen && String.sub html i aplen = a_prefix then
+      let start = i + aplen in
+      match String.index_from_opt html start '"' with
+      | None ->
+          Buffer.add_char buf html.[i];
+          go (i + 1)
+      | Some end_pos ->
+          let url = String.sub html start (end_pos - start) in
+          let clean_url = strip_file_prefix url in
+          if is_image_url clean_url then (
+            let close_a = "</a>" in
+            match
+              let search_from = end_pos + 1 in
+              let rec find_close j =
+                if j + String.length close_a > hlen then None
+                else if
+                  String.sub html j (String.length close_a) = close_a
+                then Some (j + String.length close_a)
+                else find_close (j + 1)
+              in
+              find_close search_from
+            with
+            | Some after_close ->
+                Buffer.add_string buf
+                  (Printf.sprintf "<img src=\"%s\" alt=\"%s\" />" clean_url
+                     (Filename.basename clean_url));
+                go after_close
+            | None ->
+                Buffer.add_char buf html.[i];
+                go (i + 1))
+          else (
+            Buffer.add_string buf a_prefix;
+            Buffer.add_string buf clean_url;
+            go (i + aplen + String.length url))
     else (
       Buffer.add_char buf html.[i];
       go (i + 1))
@@ -104,13 +129,13 @@ let fix_file_urls html =
   Buffer.contents buf
 
 let extract_languages html =
-  let prefix = "data-lang=\"" in
+  let prefix = "class=\"language-" in
   let plen = String.length prefix in
   let hlen = String.length html in
   let rec find acc i =
     if i + plen >= hlen then List.rev acc
     else
-      match String.index_from_opt html i 'd' with
+      match String.index_from_opt html i 'c' with
       | None -> List.rev acc
       | Some pos ->
           if pos + plen <= hlen && String.sub html pos plen = prefix then
@@ -198,18 +223,17 @@ let model_of_post p =
 
 let () =
   let argc = Array.length Sys.argv in
-  if argc < 6 then (
+  if argc < 5 then (
     Printf.eprintf
-      "Usage: %s <mldoc-bin> <content-dir> <output-dir> <template-dir> \
-       <static-dir> [base-url]\n"
+      "Usage: %s <content-dir> <output-dir> <template-dir> <static-dir> \
+       [base-url]\n"
       Sys.argv.(0);
     exit 1);
-  let mldoc_bin = Sys.argv.(1) in
-  let content_dir = Sys.argv.(2) in
-  let output_dir = Sys.argv.(3) in
-  let template_dir = Sys.argv.(4) in
-  let static_dir = Sys.argv.(5) in
-  let base_url = if argc > 6 then Sys.argv.(6) else "" in
+  let content_dir = Sys.argv.(1) in
+  let output_dir = Sys.argv.(2) in
+  let template_dir = Sys.argv.(3) in
+  let static_dir = Sys.argv.(4) in
+  let base_url = if argc > 5 then Sys.argv.(5) else "" in
   let site_name = "MirageOS Blog" in
 
   clean_dir output_dir;
@@ -223,6 +247,7 @@ let () =
   let post_tmpl = Jg_template.Loaded.from_file ~env "post.html" in
   let index_tmpl = Jg_template.Loaded.from_file ~env "index.html" in
   let rss_tmpl = Jg_template.Loaded.from_file ~env "rss.xml" in
+  let not_found_tmpl = Jg_template.Loaded.from_file ~env "404.html" in
 
   let files = Sys.readdir content_dir |> Array.to_list in
   let org_files =
@@ -242,7 +267,7 @@ let () =
         let date =
           Option.value ~default:"" (extract_directive content "DATE")
         in
-        let html_fragment = run_mldoc mldoc_bin filepath |> fix_file_urls in
+        let html_fragment = render_org content |> fix_image_links in
         let languages = extract_languages html_fragment in
         { slug; title; date; html_fragment; languages })
       org_files
@@ -278,6 +303,12 @@ let () =
         ]
   in
   write_file (Filename.concat output_dir "rss.xml") rss_xml;
+
+  let not_found_html =
+    Jg_template.Loaded.eval not_found_tmpl
+      ~models:[ ("site_name", Tstr site_name) ]
+  in
+  write_file (Filename.concat output_dir "404.html") not_found_html;
 
   let imgs_src = Filename.concat content_dir "imgs" in
   if Sys.file_exists imgs_src && Sys.is_directory imgs_src then

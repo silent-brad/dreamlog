@@ -8,4 +8,4 @@ let main =
   let packages = [ package "uri"; package "magic-mime" ] in
   main ~packages "Unikernel.Main" (kv_ro @-> http @-> job)
 
-let () = register "mirage-site" [ main $ data $ http_srv ]
+let () = register "dreamlog" [ main $ data $ http_srv ]

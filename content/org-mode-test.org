@@ -1,0 +1,86 @@
+#+TITLE: Org-Mode Feature Test
+#+AUTHOR: Test Author
+#+DATE: 2026-04-19
+
+This post exercises various org-mode features to verify the parser and renderer.
+
+** Inline markup
+
+This sentence has *bold*, /italic/, =verbatim=, and ~code~ markup. You can also combine them: */bold italic/*.
+
+** Lists
+
+*** Unordered
+
+- First item
+- Second item with =inline code=
+- Third item
+  - Nested item A
+  - Nested item B
+
+*** Ordered
+
+1. Step one
+2. Step two
+3. Step three
+
+** Source blocks
+
+Python:
+
+#+BEGIN_SRC python
+def fibonacci(n):
+    a, b = 0, 1
+    for _ in range(n):
+        yield a
+        a, b = b, a + b
+
+for num in fibonacci(10):
+    print(num)
+#+END_SRC
+
+Rust:
+
+#+BEGIN_SRC rust
+fn main() {
+    let nums: Vec<i32> = (1..=10)
+        .filter(|x| x % 2 == 0)
+        .collect();
+    println!("{:?}", nums);
+}
+#+END_SRC
+
+Shell with no language specified:
+
+#+BEGIN_SRC
+echo "hello world"
+#+END_SRC
+
+** Blockquotes
+
+#+BEGIN_QUOTE
+The purpose of abstraction is not to be vague, but to create a new semantic level in which one can be absolutely precise.
+--- Edsger W. Dijkstra
+#+END_QUOTE
+
+** Links
+
+- External link: [[https://example.com][Example]]
+- Bare URL: [[https://en.wikipedia.org/wiki/Unikernel]]
+
+** Horizontal rule
+
+Above the rule.
+
+-----
+
+Below the rule.
+
+** Tables
+
+| Language | Paradigm    | Typing |
+|----------+-------------+--------|
+| OCaml    | Functional  | Static |
+| Python   | Multi       | Dynamic |
+| Rust     | Systems     | Static |
+| Elixir   | Functional  | Dynamic |

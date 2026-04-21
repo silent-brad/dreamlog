@@ -11,6 +11,12 @@ module Main (FS : Mirage_kv.RO) (Http : HTTP) = struct
         Lwt.return_some (Http.respond_string ~status:`OK ~headers ~body ())
     | Error _ -> Lwt.return_none
 
+  let respond_not_found fs =
+    let headers = Cohttp.Header.init_with "content-type" "text/html" in
+    FS.get fs (Mirage_kv.Key.v "404.html") >>= function
+    | Ok body -> Http.respond_string ~status:`Not_found ~headers ~body ()
+    | Error _ -> Http.respond_not_found ()
+
   let rec dispatcher fs uri =
     match Uri.path uri with
     | "" | "/" -> dispatcher fs (Uri.with_path uri "/index.html")
@@ -21,7 +27,7 @@ module Main (FS : Mirage_kv.RO) (Http : HTTP) = struct
             let index_path = path ^ "/index.html" in
             try_serve fs index_path >>= function
             | Some resp -> resp
-            | None -> Http.respond_not_found ()))
+            | None -> respond_not_found fs))
 
   let start fs http =
     let callback _conn req _body =
