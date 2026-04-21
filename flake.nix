@@ -29,12 +29,12 @@
         mkDreamlog =
           {
             src,
+            config ? "config.lua",
+            port ? 8080,
           }:
           let
-            siteSrc = src;
-
-            site = pkgs.stdenv.mkDerivation {
-              name = "dreamlog-site";
+            generator = pkgs.stdenv.mkDerivation {
+              name = "dreamlog-generator";
               src = self + "/generator";
               nativeBuildInputs = with ocamlPkgs; [
                 ocaml
@@ -49,15 +49,20 @@
               ];
               buildPhase = "dune build";
               installPhase = ''
-                mkdir -p $out
-                _build/default/main.exe ${siteSrc}/site.lua $out
+                mkdir -p $out/bin
+                cp _build/default/main.exe $out/bin/dreamlog-gen
               '';
             };
+
+            site = pkgs.runCommand "dreamlog-site" { } ''
+              mkdir -p $out
+              ${generator}/bin/dreamlog-gen ${src}/${config} $out
+            '';
 
             unikernelSrc = pkgs.runCommand "dreamlog-src" { } ''
               mkdir -p $out/mirage
               cp ${self}/mirage/config.ml $out/mirage/config.ml
-              cp ${self}/mirage/unikernel.ml $out/mirage/unikernel.ml
+              sed 's/`TCP 8080/`TCP ${toString port}/' ${self}/mirage/unikernel.ml > $out/mirage/unikernel.ml
               cp -r ${site} $out/htdocs
             '';
           in

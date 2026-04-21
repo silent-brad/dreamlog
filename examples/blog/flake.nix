@@ -16,6 +16,8 @@
     flake-utils.lib.eachDefaultSystem (system: {
       packages = dreamlog.lib.${system}.mkDreamlog {
         src = ./.;
+        config = "config.lua";
+        #port = 8765;
       };
 
       defaultPackage = self.packages.${system}.unix;
