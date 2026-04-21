@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>{{ site.name }}</h1>
+    <p class="subtitle">{{ site.subtitle }}</p>
+
+    <h2>Posts</h2>
+    <ul class="post-list">
+{%- for post in posts %}
+      <li>
+        <a href="{{ post.url }}">{{ post.title }}</a>
+        <time datetime="{{ post.date }}">{{ post.date }}</time>
+      </li>
+{%- endfor %}
+    </ul>
+
+{%- if notes %}
+    <h2 id="notes">Notes</h2>
+    <ul class="post-list">
+{%- for note in notes %}
+      <li>
+        <a href="{{ note.url }}">{{ note.title }}</a>
+        <time datetime="{{ note.date }}">{{ note.date }}</time>
+      </li>
+{%- endfor %}
+    </ul>
+{%- endif %}
+{% endblock %}

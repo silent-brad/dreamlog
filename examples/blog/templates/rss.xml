@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>{{ site.name }}</title>
+    <link>{{ site.base_url }}</link>
+    <description>{{ site.subtitle }}</description>
+{%- for post in posts %}
+    <item>
+      <title>{{ post.title_escaped }}</title>
+      <link>{{ site.base_url }}{{ post.url }}</link>
+      <guid>{{ site.base_url }}{{ post.url }}</guid>
+      <pubDate>{{ post.rfc822_date }}</pubDate>
+      <description>{{ post.body_cdata }}</description>
+    </item>
+{%- endfor %}
+  </channel>
+</rss>

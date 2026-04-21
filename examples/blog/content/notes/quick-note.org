@@ -1,0 +1,9 @@
+#+TITLE: Quick Note on Nix
+#+DATE: 2026-04-20
+
+Use =nix develop= to enter a development shell. Use =nix build= to build the project. That's it.
+
+#+BEGIN_SRC sh
+nix develop
+nix build
+#+END_SRC

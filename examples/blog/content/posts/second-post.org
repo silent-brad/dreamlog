@@ -1,0 +1,21 @@
+#+TITLE: Building With Org-Mode
+#+DATE: 2026-04-19
+
+Org-mode is a powerful markup language. Here are some features.
+
+** Tables
+
+| Feature    | Supported |
+|------------+-----------|
+| Headings   | Yes       |
+| Lists      | Yes       |
+| Code       | Yes       |
+| Tables     | Yes       |
+| Blockquote | Yes       |
+
+** A quote
+
+#+BEGIN_QUOTE
+The best way to predict the future is to invent it.
+--- Alan Kay
+#+END_QUOTE

@@ -42,7 +42,9 @@
           ];
           buildInputs = [
             ocamlPkgs.jingoo
+            ocamlPkgs.ocaml-lua
             orgcaml
+            pkgs.lua5_1
           ];
           buildPhase = "dune build";
           installPhase = ''
@@ -51,42 +53,56 @@
           '';
         };
 
-        site = pkgs.runCommand "dreamlog-site" { nativeBuildInputs = [ generator ]; } ''
-          mkdir -p $out
-          site-generator ${./content} $out ${./templates} ${./static}
-        '';
-
-        # Compose source tree: inject generated site as htdocs for ocaml-crunch
-        src = pkgs.runCommand "dreamlog-src" { } ''
-          cp -r ${./.} $out
-          chmod -R u+w $out
-          rm -rf $out/generator $out/templates $out/static
-          cp -r ${site} $out/htdocs
-        '';
-
         mirage-nix = hillingar.lib.${system};
         inherit (mirage-nix) mkUnikernelPackages;
+
+        mkDreamlog =
+          {
+            src,
+          }:
+          let
+            site = pkgs.runCommand "dreamlog-site" { nativeBuildInputs = [ generator ]; } ''
+              mkdir -p $out
+              site-generator ${src}/site.lua $out
+            '';
+
+            unikernelSrc = pkgs.runCommand "dreamlog-src" { } ''
+              mkdir -p $out/mirage
+              cp ${self}/mirage/config.ml $out/mirage/config.ml
+              cp ${self}/mirage/unikernel.ml $out/mirage/unikernel.ml
+              cp -r ${site} $out/htdocs
+            '';
+          in
+          {
+            inherit site;
+
+            packages = mkUnikernelPackages {
+              unikernelName = "dreamlog";
+              mirageDir = "mirage";
+              depexts = with pkgs; [
+                solo5
+                gmp
+              ];
+              monorepoQuery = {
+                ocaml-base-compiler = "*";
+                jsonm = "1.0.1+dune";
+                uutf = "1.0.3+dune";
+              };
+              query = {
+                mirage = "4.5.0";
+                ocaml-base-compiler = "*";
+              };
+            } unikernelSrc;
+          };
+
+        dreamlog = mkDreamlog { src = ./.; };
       in
       {
-        packages = (
-          mkUnikernelPackages {
-            unikernelName = "dreamlog";
-            mirageDir = "mirage";
-            depexts = with pkgs; [
-              solo5
-              gmp
-            ];
-            monorepoQuery = {
-              ocaml-base-compiler = "*";
-              jsonm = "1.0.1+dune";
-              uutf = "1.0.3+dune";
-            };
-            query = {
-              mirage = "4.5.0";
-              ocaml-base-compiler = "*";
-            };
-          } src
-        );
+        lib.mkDreamlog = mkDreamlog;
+
+        packages = dreamlog.packages // {
+          site = dreamlog.site;
+        };
 
         defaultPackage = self.packages.${system}.unix;
       }

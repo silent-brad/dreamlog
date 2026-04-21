@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block head %}
+{%- if post.languages %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+{%- endif %}
+{% endblock %}
+
+{% block header %}
+  <header>
+    <nav><a href="/">← Home</a></nav>
+  </header>
+{% endblock %}
+
+{% block content %}
+    <article>
+      <h1>{{ post.title }}</h1>
+      <time datetime="{{ post.date }}">{{ post.date }}</time>
+      <div class="content">
+{{ post.body }}
+      </div>
+    </article>
+{% endblock %}
+
+{% block footer %}
+{%- if post.languages %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+{%- for lang in post.languages %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/{{ lang }}.min.js"></script>
+{%- endfor %}
+  <script>
+    document.querySelectorAll('pre code[class^="language-"]').forEach(el => {
+      hljs.highlightElement(el);
+    });
+  </script>
+{%- endif %}
+{% endblock %}

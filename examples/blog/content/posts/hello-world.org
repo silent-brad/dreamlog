@@ -1,0 +1,24 @@
+#+TITLE: Hello World
+#+DATE: 2026-04-20
+
+This is the first post on the example blog. It demonstrates basic org-mode features.
+
+** Code example
+
+#+BEGIN_SRC python
+def greet(name):
+    return f"Hello, {name}!"
+
+print(greet("World"))
+#+END_SRC
+
+** Lists
+
+- Item one
+- Item two
+- Item three
+
+** Links
+
+- [[https://orgmode.org][Org Mode]]
+- [[https://ocaml.org][OCaml]]
