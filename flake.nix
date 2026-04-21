@@ -17,11 +17,16 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = [ orgcaml.overlays.default ];
-        };
+        pkgs = import nixpkgs { inherit system; };
         ocamlPkgs = pkgs.ocamlPackages;
+
+        orgcamlLib = ocamlPkgs.buildDunePackage {
+          pname = "orgcaml";
+          version = "0.1.0";
+          src = orgcaml;
+          duneVersion = "3";
+          propagatedBuildInputs = [ ocamlPkgs.angstrom ];
+        };
 
         mirage-nix = hillingar.lib.${system};
         inherit (mirage-nix) mkUnikernelPackages;
@@ -44,7 +49,7 @@
               buildInputs = [
                 ocamlPkgs.jingoo
                 ocamlPkgs.ocaml-lua
-                ocamlPkgs.orgcaml
+                orgcamlLib
                 pkgs.lua5_1
               ];
               buildPhase = "dune build";

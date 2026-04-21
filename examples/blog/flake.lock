@@ -177,11 +177,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1776797231,
-        "narHash": "sha256-17Mxnx3AxcJpxqcvSJMcBOkAmaQ2rMbBMxnAyOJPvvw=",
+        "lastModified": 1776807375,
+        "narHash": "sha256-LDnHG0T54OEHyRydmGUlAND8ham0KrRNWjgoS+6GUd4=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "f4e70f270813d9c14f1b17767f6f623e6859826f",
+        "rev": "553ecb1686a2edb75dee44c9f72e1674e6adc26a",
         "type": "github"
       },
       "original": {
@@ -208,11 +208,11 @@
     },
     "nixpkgs_4": {
       "locked": {
-        "lastModified": 1776798874,
-        "narHash": "sha256-LZ5DSZnfCQRjd2u0bifyAMubEDIHsOa7DceQWkmLjvU=",
+        "lastModified": 1776807375,
+        "narHash": "sha256-LDnHG0T54OEHyRydmGUlAND8ham0KrRNWjgoS+6GUd4=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "b749fa90d9cbab2b428a1375b6b5765c9ab725f4",
+        "rev": "553ecb1686a2edb75dee44c9f72e1674e6adc26a",
         "type": "github"
       },
       "original": {
@@ -329,10 +329,12 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1776798763,
-        "narHash": "sha256-kPQLcuZQFoU4vuwE6+31vlYE8dbAoa5z4jaN1srS1Bc=",
-        "path": "/home/redironninja/pjs/orgcaml",
-        "type": "path"
+        "lastModified": 1776797354,
+        "narHash": "sha256-2MPBrnes1lw8VxswgVgEmz3zqgTHtveeTp/6SzNG6Rc=",
+        "owner": "silent-brad",
+        "repo": "orgcaml",
+        "rev": "5dcc24bea974708eb55b247478ff29147775e4f7",
+        "type": "github"
       },
       "original": {
         "owner": "silent-brad",
