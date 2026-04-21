@@ -13,19 +13,11 @@
       dreamlog,
       ...
     }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        result = dreamlog.lib.${system}.mkDreamlog {
-          src = ./.;
-        };
-      in
-      {
-        packages = result.packages // {
-          site = result.site;
-        };
+    flake-utils.lib.eachDefaultSystem (system: {
+      packages = dreamlog.lib.${system}.mkDreamlog {
+        src = ./.;
+      };
 
-        defaultPackage = self.packages.${system}.unix;
-      }
-    );
+      defaultPackage = self.packages.${system}.unix;
+    });
 }
