@@ -29,7 +29,7 @@ collections = {
 pages = {
 	{ output = "index.html", template = "index.html" },
 	{ output = "404.html", template = "404.html" },
-	{ output = "tags/index.html", template = "tags.html" },
+	{ output = "tags.html", template = "tags.html" },
 	{ output = "rss.xml", template = "rss.xml", collections = { "posts" } },
 	{ output = "feed.xml", template = "rss.xml", collections = { "posts", "notes" } },
 	{

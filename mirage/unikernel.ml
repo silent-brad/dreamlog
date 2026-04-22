@@ -24,10 +24,14 @@ module Main (FS : Mirage_kv.RO) (Http : HTTP) = struct
         try_serve fs path >>= function
         | Some resp -> resp
         | None -> (
-            let index_path = path ^ "/index.html" in
-            try_serve fs index_path >>= function
+            let html_path = path ^ ".html" in
+            try_serve fs html_path >>= function
             | Some resp -> resp
-            | None -> respond_not_found fs))
+            | None -> (
+                let index_path = path ^ "/index.html" in
+                try_serve fs index_path >>= function
+                | Some resp -> resp
+                | None -> respond_not_found fs)))
 
   let start fs http =
     let callback _conn req _body =

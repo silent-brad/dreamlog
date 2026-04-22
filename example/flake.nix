@@ -2,7 +2,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs";
     #dreamlog.url = "github:silent-brad/dreamlog";
-    dreamlog.url = "path:../..";
+    dreamlog.url = "path:..";
   };
 
   outputs =
