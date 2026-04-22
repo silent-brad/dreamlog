@@ -16,18 +16,15 @@ let process_collection base_dir (coll : collection_config) =
       (fun filename ->
         let slug = Filename.chop_suffix filename ".org" in
         let filepath = Filename.concat content_dir filename in
-        let content = Util.read_file filepath in
+        let raw = Util.read_file filepath in
+        let doc = Content.parse raw in
         let title =
-          Option.value ~default:slug (Content.extract_directive content "TITLE")
+          Option.value ~default:slug (Content.get_property doc "TITLE")
         in
-        let date =
-          Option.value ~default:"" (Content.extract_directive content "DATE")
-        in
-        let html_fragment =
-          Content.render_org content |> Content.fix_image_links
-        in
-        let languages = Content.extract_languages html_fragment in
-        let tags = Content.parse_tags content in
+        let date = Option.value ~default:"" (Content.get_property doc "DATE") in
+        let html_fragment = Content.render doc in
+        let languages = Content.languages doc in
+        let tags = Content.parse_tags doc in
         let url = Template.expand_permalink coll.permalink slug in
         { slug; title; date; html_fragment; languages; tags; url })
       org_files
