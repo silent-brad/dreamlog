@@ -1,0 +1,64 @@
+#+TITLE: Dreamlog
+#+DATE: 2026-04-21
+
+Dreamlog is a static site generator that produces [[https://mirage.io][MirageOS]] unikernels. You write content in Org-mode, configure your site with Lua, style it with Jingoo templates, and =nix build= gives you a self-contained unikernel binary that serves the result.
+
+** Quick Start
+
+Create a flake for your site:
+
+#+BEGIN_SRC nix
+{
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs";
+    dreamlog.url = "github:silent-brad/dreamlog";
+  };
+
+  outputs = { self, nixpkgs, flake-utils, dreamlog, ... }:
+    flake-utils.lib.eachDefaultSystem (system: {
+      packages = dreamlog.lib.${system}.mkDreamlog {
+        src = ./.;
+        config = "config.lua";
+        port = 8080;
+      };
+
+      defaultPackage = self.packages.${system}.unix;
+    });
+}
+#+END_SRC
+
+Build and run:
+
+#+BEGIN_SRC sh
+nix build .#unix
+./result/dreamlog
+#+END_SRC
+
+Your site is now served on the configured port.
+
+** Project Layout
+
+A Dreamlog site has this structure:
+
+#+BEGIN_EXAMPLE
+my-site/
+├── config.lua          # Site configuration
+├── content/
+│   ├── posts/          # A collection of .org files
+│   │   ├── my-post.org
+│   │   └── imgs/       # Images (copied to /imgs/ in output)
+│   └── notes/          # Another collection
+├── static/             # Copied verbatim to output root
+│   └── style.css
+├── templates/          # Jingoo HTML templates
+│   ├── base.html
+│   ├── index.html
+│   └── post.html
+└── flake.nix
+#+END_EXAMPLE
+
+** Further Reading
+
+- [[file:configuration.org][Configuration]] — =config.lua= reference
+- [[file:content.org][Content]] — Writing content in Org-mode
+- [[file:templates.org][Templates]] — Jingoo template variables and structure

@@ -1,0 +1,158 @@
+#+TITLE: Configuration
+#+DATE: 2026-04-21
+
+Site configuration lives in a Lua file (=config.lua= by default). It is read by the generator at build time.
+
+** Site Metadata
+
+#+BEGIN_SRC lua
+site = {
+    name = "My Blog",
+    subtitle = "A short description.",
+    base_url = "https://example.com",
+}
+#+END_SRC
+
+| Field      | Description                                    |
+|------------+------------------------------------------------|
+| =name=     | Site title, available as =site.name= in templates |
+| =subtitle= | Tagline, available as =site.subtitle=          |
+| =base_url= | Root URL for absolute links (e.g. RSS feeds)   |
+
+** Directories
+
+#+BEGIN_SRC lua
+templates_dir = "templates"
+static_dir = "static"
+#+END_SRC
+
+Both are relative to the config file. =static_dir= contents are copied verbatim to the output root.
+
+** Collections
+
+Collections map a directory of =.org= files to rendered pages.
+
+#+BEGIN_SRC lua
+collections = {
+    posts = {
+        dir = "content/posts",
+        template = "post.html",
+        permalink = "/:slug",
+        item_var = "post",
+        sort_by = "date",
+        sort_order = "desc",
+    },
+}
+#+END_SRC
+
+| Field        | Default     | Description                                          |
+|--------------+-------------+------------------------------------------------------|
+| =dir=        | (required)  | Directory containing =.org= files, relative to config |
+| =template=   | (required)  | Template file used to render each item                |
+| =permalink=  | =/:slug=    | URL pattern; =:slug= is replaced with the filename   |
+| =item_var=   | =item=      | Variable name exposed to the template                 |
+| =sort_by=    | =date=      | Field to sort items by                                |
+| =sort_order= | =desc=      | =asc= or =desc=                                     |
+
+Each collection's items are also available as a list in all templates under the collection's name (e.g. =posts=, =notes=).
+
+** Pages
+
+Pages are standalone templates rendered once each. They support two optional fields: =collections= and =args=.
+
+#+BEGIN_SRC lua
+pages = {
+    { output = "index.html", template = "index.html" },
+    { output = "404.html",   template = "404.html" },
+}
+#+END_SRC
+
+| Field          | Description                                            |
+|----------------+--------------------------------------------------------|
+| =output=       | Output file path relative to root                      |
+| =template=     | Template file to render                                 |
+| =collections=  | List of collection names to merge into an =items= var  |
+| =args=         | Table of arbitrary values passed to the template        |
+
+Pages receive =site=, =site_name=, =base_url=, all collection lists, and =tags= as template variables.
+
+*** Collections on Pages
+
+When a page specifies =collections=, items from those collections are merged into a single date-sorted list and made available as =items= in the template. This is the intended way to build RSS feeds:
+
+#+BEGIN_SRC lua
+pages = {
+    -- Posts-only feed
+    { output = "rss.xml", template = "rss.xml", collections = {"posts"} },
+    -- Combined feed from multiple collections
+    { output = "feed.xml", template = "rss.xml", collections = {"posts", "notes"} },
+}
+#+END_SRC
+
+The =rss.xml= template then iterates over =items=:
+
+#+BEGIN_SRC xml
+{%- for item in items %}
+    <item>
+      <title>{{ item.title_escaped }}</title>
+      <link>{{ site.base_url }}{{ item.url }}</link>
+      <pubDate>{{ item.rfc822_date }}</pubDate>
+      <description>{{ item.body_cdata }}</description>
+    </item>
+{%- endfor %}
+#+END_SRC
+
+*** Page Arguments
+
+The =args= table passes arbitrary data to the template. Values can be strings, numbers, booleans, lists, or nested tables:
+
+#+BEGIN_SRC lua
+pages = {
+    { output = "links.html", template = "links.html", args = {
+        heading = "Bookmarks",
+        links = {
+            { name = "Org Mode", url = "https://orgmode.org" },
+            { name = "OCaml",    url = "https://ocaml.org" },
+        },
+    }},
+}
+#+END_SRC
+
+These are accessible directly by name in the template:
+
+#+BEGIN_SRC html
+<h1>{{ heading }}</h1>
+<ul>
+{%- for link in links %}
+  <li><a href="{{ link.url }}">{{ link.name }}</a></li>
+{%- endfor %}
+</ul>
+#+END_SRC
+
+** Tag Pages
+
+When =tag_pages= is configured, a page is generated for each unique tag found across all collections:
+
+#+BEGIN_SRC lua
+tag_pages = {
+    template = "tag.html",
+    permalink = "/tags/:tag",
+}
+#+END_SRC
+
+| Field       | Default        | Description                                |
+|-------------+----------------+--------------------------------------------|
+| =template=  | (required)     | Template used to render each tag page      |
+| =permalink= | =/tags/:tag=   | URL pattern; =:tag= is replaced with the tag name |
+
+The tag template receives =tag= (string), =items= (list of items with that tag), plus all the usual global variables. See [[file:content.org][Content]] for how to add tags to items.
+
+** Nix Parameters
+
+These are passed to =mkDreamlog= in your =flake.nix=, not in the Lua config:
+
+| Parameter | Default        | Description                          |
+|-----------+----------------+--------------------------------------|
+| =src=     | (required)     | Path to the site source directory    |
+| =config=  | ="config.lua"= | Config filename relative to =src=    |
+| =port=    | =8080=         | TCP port the unikernel listens on    |

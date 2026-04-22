@@ -1,0 +1,122 @@
+#+TITLE: Templates
+#+DATE: 2026-04-21
+
+Templates use the [[https://github.com/tategakibunko/jingoo][Jingoo]] engine, which follows Jinja2 syntax. They live in the directory specified by =templates_dir= in your config.
+
+** Template Inheritance
+
+Use ={% extends "base.html" %}= and ={% block name %}= for layout inheritance:
+
+#+BEGIN_SRC html
+{# base.html #}
+<!DOCTYPE html>
+<html>
+<head><title>{% block title %}{{ site.name }}{% endblock %}</title></head>
+<body>
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>
+#+END_SRC
+
+#+BEGIN_SRC html
+{# post.html #}
+{% extends "base.html" %}
+{% block title %}{{ post.title }}{% endblock %}
+{% block content %}
+  <article>
+    <h1>{{ post.title }}</h1>
+    {{ post.body }}
+  </article>
+{% endblock %}
+#+END_SRC
+
+** Variables
+
+*** Global (available in all templates)
+
+| Variable    | Type   | Description               |
+|-------------+--------+---------------------------|
+| =site=      | object | Site metadata object      |
+| =site.name= | string | From =site.name= in config |
+| =site.subtitle= | string | From =site.subtitle=  |
+| =site.base_url= | string | From =site.base_url=  |
+| =site_name= | string | Shorthand for =site.name= |
+| =base_url=  | string | Shorthand (pages only)    |
+
+*** Collection Lists
+
+Each collection is available by name as a list of item objects. For example, a =posts= collection provides a =posts= list:
+
+#+BEGIN_SRC html
+{% for post in posts %}
+  <a href="{{ post.url }}">{{ post.title }}</a>
+{% endfor %}
+#+END_SRC
+
+*** Item Variables
+
+When rendering an individual item, it is available under the name set by =item_var= in the collection config (e.g. =post=, =note=):
+
+| Variable          | Type   | Description                             |
+|-------------------+--------+-----------------------------------------|
+| =.slug=           | string | Filename without =.org= extension       |
+| =.title=          | string | From =#+TITLE= directive                |
+| =.date=           | string | From =#+DATE= directive (=YYYY-MM-DD=)  |
+| =.body=           | safe   | Rendered HTML content (unescaped)        |
+| =.url=            | string | Resolved permalink path                  |
+| =.tags=           | list   | List of tag objects (=.name=, =.url=)    |
+| =.languages=      | list   | Language strings from source blocks      |
+| =.title_escaped=  | safe   | XML-escaped title (for RSS)              |
+| =.rfc822_date=    | string | Date in RFC 822 format (for RSS)         |
+| =.body_cdata=     | safe   | Body wrapped in CDATA (for RSS)          |
+
+** Control Flow
+
+Standard Jingoo/Jinja2 constructs:
+
+#+BEGIN_SRC html
+{% if notes %}
+  <h2>Notes</h2>
+  <ul>
+  {% for note in notes %}
+    <li><a href="{{ note.url }}">{{ note.title }}</a></li>
+  {% endfor %}
+  </ul>
+{% endif %}
+#+END_SRC
+
+** Tags
+
+A global =tags= list is available in all templates. Each entry has:
+
+| Field    | Type   | Description                |
+|----------+--------+----------------------------|
+| =.name=  | string | Tag name                   |
+| =.url=   | string | URL of the tag page        |
+| =.count= | int    | Number of items with tag   |
+
+#+BEGIN_SRC html
+{% for tag in tags %}
+  <a href="{{ tag.url }}">{{ tag.name }}</a> ({{ tag.count }})
+{% endfor %}
+#+END_SRC
+
+Items also carry their own =tags= list (objects with =.name= and =.url=):
+
+#+BEGIN_SRC html
+{% for tag in post.tags %}
+  <a href="{{ tag.url }}">{{ tag.name }}</a>
+{% endfor %}
+#+END_SRC
+
+Tag URLs are empty strings when =tag_pages= is not configured.
+
+** Page Arguments and Collections
+
+Pages configured with =args= in =config.lua= have those values available directly as template variables. See [[file:configuration.org][Configuration]] for examples.
+
+Pages with a =collections= list receive a merged =items= variable containing all items from those collections, sorted by date descending.
+
+** Autoescaping
+
+Autoescaping is disabled. Variables marked as =safe= (=body=, =title_escaped=, =body_cdata=) are rendered without escaping.

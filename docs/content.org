@@ -1,0 +1,60 @@
+#+TITLE: Content
+#+DATE: 2026-04-21
+
+Content files are written in Org-mode and placed in a collection's directory.
+
+** File Structure
+
+Each =.org= file becomes one page. The filename (without =.org=) is used as the slug.
+
+#+BEGIN_EXAMPLE
+content/posts/hello-world.org  →  /hello-world/index.html
+content/notes/my-note.org      →  /notes/my-note/index.html
+#+END_EXAMPLE
+
+** Directives
+
+Metadata is read from standard Org directives at the top of the file:
+
+#+BEGIN_SRC org
+,#+TITLE: My Post Title
+,#+DATE: 2026-04-21
+,#+TAGS: ocaml, nix
+#+END_SRC
+
+| Directive | Description                                     |
+|-----------+-------------------------------------------------|
+| =#+TITLE= | Page title. Falls back to the slug if absent.   |
+| =#+DATE=  | Date in =YYYY-MM-DD= format. Used for sorting. |
+| =#+TAGS=  | Comma or space separated list of tags.          |
+
+** Supported Org Features
+
+Content is parsed by [[https://github.com/silent-brad/orgcaml][OrgCaml]]. Standard Org-mode constructs are supported:
+
+- Headings
+- Paragraphs
+- Ordered and unordered lists
+- Links (=[[url][text]]=)
+- Source blocks (=#+BEGIN_SRC ... #+END_SRC=)
+- Bold, italic, code, verbatim inline markup
+
+** Images
+
+Image links (=.png=, =.jpg=, =.jpeg=, =.gif=, =.svg=, =.webp=, =.bmp=) are automatically converted from Org-style links to =<img>= tags. The =file:= prefix is stripped if present.
+
+Place images in an =imgs/= subdirectory inside the collection's content directory:
+
+#+BEGIN_EXAMPLE
+content/posts/imgs/diagram.png
+#+END_EXAMPLE
+
+These are copied to =/imgs/= in the output and can be referenced as:
+
+#+BEGIN_SRC org
+[[file:imgs/diagram.png]]
+#+END_SRC
+
+** Syntax Highlighting
+
+Source blocks with a language specified produce =<code class="language-xxx">= elements. Templates can detect which languages appear in a post via the =languages= variable and load highlight.js for those languages. See [[file:templates.org][Templates]] for details.

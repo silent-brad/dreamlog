@@ -1,6 +1,7 @@
 #+TITLE: Hello from a Unikernel
 #+AUTHOR: Test Author
 #+DATE: 2026-04-20
+#+TAGS: ocaml, mirage
 
 This is a test post served by a MirageOS unikernel. If you're reading this, the static site generator is working.
 

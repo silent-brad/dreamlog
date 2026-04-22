@@ -82,6 +82,15 @@ let fix_image_links html =
   go 0;
   Buffer.contents buf
 
+let parse_tags content =
+  match extract_directive content "TAGS" with
+  | None -> []
+  | Some tags_str ->
+      let sep = if String.contains tags_str ',' then ',' else ' ' in
+      String.split_on_char sep tags_str
+      |> List.map String.trim
+      |> List.filter (fun s -> s <> "")
+
 let extract_languages html =
   let prefix = "class=\"language-" in
   let plen = String.length prefix in

@@ -1,5 +1,6 @@
 #+TITLE: Building With Org-Mode
 #+DATE: 2026-04-19
+#+TAGS: org-mode
 
 Org-mode is a powerful markup language. Here are some features.
 

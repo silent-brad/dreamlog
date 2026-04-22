@@ -17,7 +17,7 @@
 {% block content %}
     <article>
       <h1>{{ note.title }}</h1>
-      <time datetime="{{ note.date }}">{{ note.date }}</time>
+      <time datetime="{{ note.date }}">{{ note.date_formatted }}</time>
       <div class="content">
 {{ note.body }}
       </div>
@@ -26,7 +26,7 @@
 
 {% block footer %}
 {%- if note.languages %}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="/highlight.min.js"></script>
 {%- for lang in note.languages %}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/{{ lang }}.min.js"></script>
 {%- endfor %}

@@ -1,5 +1,6 @@
 #+TITLE: Hello World
 #+DATE: 2026-04-20
+#+TAGS: intro, ocaml
 
 This is the first post on the example blog. It demonstrates basic org-mode features.
 

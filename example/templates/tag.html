@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tag }} — {{ site.name }}{% endblock %}
+
+{% block header %}
+  <header>
+    <nav><a href="/">← Home</a></nav>
+  </header>
+{% endblock %}
+
+{% block content %}
+    <h1>Tagged "{{ tag }}"</h1>
+    <ul class="post-list">
+{%- for item in items %}
+      <li>
+        <a href="{{ item.url }}">{{ item.title }}</a>
+        <time datetime="{{ item.date }}">{{ item.date_formatted }}</time>
+      </li>
+{%- endfor %}
+    </ul>
+{% endblock %}
