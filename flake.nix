@@ -99,7 +99,7 @@
               ${generator}/bin/dreamlog-gen ${config} "$OUTPUT_DIR"
 
               ${pkgs.static-web-server}/bin/static-web-server \
-                --port "$PORT" --root "$OUTPUT_DIR" &
+                --port "$PORT" --root "$OUTPUT_DIR" --cache-control-headers false &
               SERVER_PID=$!
               trap 'kill $SERVER_PID 2>/dev/null; rm -rf "$OUTPUT_DIR"' EXIT
 
