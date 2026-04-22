@@ -36,6 +36,20 @@ nix build .#unix
 
 Your site is now served on the configured port.
 
+** Development
+
+Run a local dev server that watches for changes and regenerates automatically:
+
+#+BEGIN_SRC sh
+nix run .#dev
+#+END_SRC
+
+This serves on port 8080 by default. Pass a port number to override:
+
+#+BEGIN_SRC sh
+nix run .#dev -- 3000
+#+END_SRC
+
 ** Project Layout
 
 A Dreamlog site has this structure:

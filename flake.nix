@@ -90,7 +90,7 @@
             };
           } unikernelSrc)
           // {
-            serve = pkgs.writeShellScriptBin "dreamlog-dev" ''
+            dev = pkgs.writeShellScriptBin "dreamlog-dev" ''
               set -e
               PORT="''${1:-${toString port}}"
               OUTPUT_DIR="$(mktemp -d)"
