@@ -61,7 +61,8 @@
 
             site = pkgs.runCommand "dreamlog-site" { } ''
               mkdir -p $out
-              ${generator}/bin/dreamlog-gen ${src}/${config} $out
+              cd ${src}
+              ${generator}/bin/dreamlog-gen ${config} $out
             '';
 
             unikernelSrc = pkgs.runCommand "dreamlog-src" { } ''
