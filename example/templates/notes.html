@@ -1,0 +1,22 @@
+{% extends "base.html" %} {% block content %}
+<h1>{{ site.name }}</h1>
+<p class="subtitle">{{ site.subtitle }}</p>
+
+{%- if notes %}
+<h2 id="notes">Notes</h2>
+<ul class="post-list">
+  {%- for note in notes %}
+  <li>
+    <a href="{{ note.url }}">{{ note.title }}</a>
+    <time datetime="{{ note.date }}">{{ note.date_formatted }}</time>
+  </li>
+  {%- endfor %}
+</ul>
+{%- endif %} {%- if tags %}
+<h2 id="tags">Tags</h2>
+<ul class="tag-list">
+  {%- for tag in tags %}
+  <li><a href="{{ tag.url }}">{{ tag.name }}</a> ({{ tag.count }})</li>
+  {%- endfor %}
+</ul>
+{%- endif %} {% endblock %}

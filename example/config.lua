@@ -32,6 +32,7 @@ pages = {
 	{ output = "tags.html", template = "tags.html" },
 	{ output = "rss.xml", template = "rss.xml", collections = { "posts" } },
 	{ output = "feed.xml", template = "rss.xml", collections = { "posts", "notes" } },
+	{ output = "notes.html", template = "notes.html" },
 	{
 		output = "links.html",
 		template = "links.html",
