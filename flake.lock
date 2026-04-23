@@ -273,11 +273,11 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1776892192,
-        "narHash": "sha256-p2CaK6CxSggC1YLZkx9jJbvcGs8FyKFvkApE9RRrypM=",
+        "lastModified": 1776957140,
+        "narHash": "sha256-XANAm/iZJYkRi34SiodXG8rpEXFzZzBR/BYsLFqzGU0=",
         "owner": "silent-brad",
         "repo": "orgcaml",
-        "rev": "c26c18b5db49d0a2a42854da14f52c86ea5acdf9",
+        "rev": "eafed6e8013045c761a71eec16c3a93f4cdd40a8",
         "type": "github"
       },
       "original": {
